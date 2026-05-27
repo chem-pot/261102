@@ -1,0 +1,1033 @@
+ 
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>화학 결합 시뮬레이션</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #e0e0ff;
+            text-shadow: 0 0 20px rgba(100, 100, 255, 0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: #aaaacc;
+            margin-bottom: 20px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .metal-legend     { background: linear-gradient(135deg, #7f1d1d, #ef4444); }
+        .nonmetal-legend  { background: linear-gradient(135deg, #14532d, #22c55e); }
+        .metalloid-legend { background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
+
+        .selected-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .selected-element {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 12px 20px;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .selected-element .label {
+            font-size: 12px;
+            color: #aaaacc;
+            margin-bottom: 5px;
+        }
+
+        .selected-element .symbol {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .selected-element .name {
+            font-size: 13px;
+            color: #ccccee;
+        }
+
+        .plus-sign {
+            font-size: 36px;
+            color: #aaaacc;
+        }
+
+        .check-button {
+            display: block;
+            margin: 0 auto 10px;
+            padding: 12px 30px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .check-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .check-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .reset-button {
+            display: block;
+            margin: 0 auto 20px;
+            padding: 8px 20px;
+            font-size: 14px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .reset-button:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .periodic-table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .periodic-table-container {
+            min-width: 980px;
+            margin: 0 auto;
+        }
+
+        .group-headers {
+            display: grid;
+            grid-template-columns: 36px repeat(18, 50px);
+            gap: 2px;
+            margin-bottom: 2px;
+        }
+
+        .group-header {
+            text-align: center;
+            font-size: 11px;
+            color: #aaaacc;
+            font-weight: bold;
+            padding: 3px 0;
+        }
+
+        .period-row {
+            display: grid;
+            grid-template-columns: 36px repeat(18, 50px);
+            gap: 2px;
+            margin-bottom: 2px;
+        }
+
+        .period-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #aaaacc;
+            font-weight: bold;
+        }
+
+        .element-cell {
+            width: 50px;
+            height: 54px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .element-cell:hover {
+            transform: scale(1.18);
+            z-index: 10;
+            border-color: white;
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+
+        .element-cell.selected-1 {
+            border: 2px solid #ff6b6b !important;
+            box-shadow: 0 0 14px rgba(255,107,107,0.9) !important;
+            transform: scale(1.08);
+            z-index: 5;
+        }
+
+        .element-cell.selected-2 {
+            border: 2px solid #4ecdc4 !important;
+            box-shadow: 0 0 14px rgba(78,205,196,0.9) !important;
+            transform: scale(1.08);
+            z-index: 5;
+        }
+
+        .element-cell.empty {
+            background: transparent !important;
+            border: none !important;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .el-number {
+            font-size: 9px;
+            color: rgba(255,255,255,0.75);
+            line-height: 1;
+        }
+
+        .el-symbol {
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .el-name {
+            font-size: 7.5px;
+            color: rgba(255,255,255,0.85);
+            line-height: 1;
+        }
+
+        /* 3가지 색상 */
+        .metal     { background: linear-gradient(135deg, #7f1d1d, #ef4444); }
+        .nonmetal  { background: linear-gradient(135deg, #14532d, #22c55e); }
+        .metalloid { background: linear-gradient(135deg, #1e3a8a, #3b82f6); }
+
+        /* 란타넘족·악티늄족 별도 행 */
+        .lantha-section { margin-top: 10px; }
+
+        .lantha-row {
+            display: grid;
+            grid-template-columns: 36px 56px repeat(15, 50px);
+            gap: 2px;
+            margin-bottom: 2px;
+        }
+
+        .lantha-period-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #aaaacc;
+            font-weight: bold;
+        }
+
+        .lantha-series-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 4px;
+            font-size: 9px;
+            color: #aaaacc;
+            white-space: nowrap;
+        }
+
+        /* 툴팁 */
+        .tooltip {
+            display: none;
+            position: absolute;
+            bottom: 58px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10,10,30,0.97);
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 200;
+            pointer-events: none;
+        }
+
+        .element-cell:hover .tooltip { display: block; }
+
+        .tooltip-symbol {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .selected-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .indicator-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .indicator-dot { width: 14px; height: 14px; border-radius: 50%; }
+        .dot-1 { background: #ff6b6b; }
+        .dot-2 { background: #4ecdc4; }
+
+        .select-hint {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        /* 모달 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 35px;
+            max-width: 560px;
+            width: 92%;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            animation: modalIn 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.8) translateY(-20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px; right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #aaaacc;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover { color: white; }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 18px;
+            color: #e0e0ff;
+        }
+
+        .formula-display {
+            text-align: center;
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255,215,0,0.5);
+        }
+
+        .formula-display sub { font-size: 26px; }
+        .formula-display sup { font-size: 22px; }
+
+        .badge-container {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .bond-type-badge {
+            display: inline-block;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .ionic-badge    { background: linear-gradient(135deg, #f97316, #ef4444); box-shadow: 0 4px 15px rgba(249,115,22,0.4); }
+        .covalent-badge { background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+        .unknown-badge  { background: linear-gradient(135deg, #6b7280, #4b5563); }
+
+        .electron-visual {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin: 18px 0;
+            flex-wrap: wrap;
+        }
+
+        .atom-visual { text-align: center; }
+
+        .atom-circle {
+            width: 68px; height: 68px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 auto 6px;
+            border: 2px solid rgba(255,255,255,0.4);
+        }
+
+        .atom-label { font-size: 11px; color: #aaaacc; }
+        .arrow-visual { font-size: 26px; color: #ffd700; }
+
+        .explanation-box {
+            background: rgba(255,255,255,0.07);
+            border-left: 3px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 13.5px;
+            line-height: 1.9;
+            color: #ccccee;
+        }
+
+        .hl-yellow { color: #ffd700; font-weight: bold; }
+        .hl-blue   { color: #60a5fa; font-weight: bold; }
+        .hl-green  { color: #34d399; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h1>⚗️ 화학 결합 시뮬레이션</h1>
+<p class="subtitle">고등학교 1학년 통합과학 | 원소 두 개를 선택하여 화학 결합을 알아보세요!</p>
+
+<!-- 범례 -->
+<div class="legend">
+    <div class="legend-item">
+        <div class="legend-color metal-legend"></div>
+        <span>금속</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color nonmetal-legend"></div>
+        <span>비금속 (비활성 기체 포함)</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color metalloid-legend"></div>
+        <span>준금속</span>
+    </div>
+</div>
+
+<!-- 선택 인디케이터 -->
+<div class="selected-indicator">
+    <div class="indicator-item"><div class="indicator-dot dot-1"></div><span>첫 번째 원소</span></div>
+    <div class="indicator-item"><div class="indicator-dot dot-2"></div><span>두 번째 원소</span></div>
+</div>
+
+<p class="select-hint">주기율표에서 원소를 2개 선택하세요</p>
+
+<!-- 선택된 원소 표시 -->
+<div class="selected-display">
+    <div class="selected-element" id="selected1">
+        <div class="label">첫 번째 원소</div>
+        <div class="symbol" style="color:#ff6b6b;">?</div>
+        <div class="name">선택 안 됨</div>
+    </div>
+    <div class="plus-sign">+</div>
+    <div class="selected-element" id="selected2">
+        <div class="label">두 번째 원소</div>
+        <div class="symbol" style="color:#4ecdc4;">?</div>
+        <div class="name">선택 안 됨</div>
+    </div>
+</div>
+
+<button class="check-button" id="checkBtn" disabled onclick="checkBond()">결합 확인하기 🔬</button>
+<button class="reset-button" onclick="resetSelection()">🔄 선택 초기화</button>
+
+<!-- 주기율표 -->
+<div class="periodic-table-wrapper">
+    <div class="periodic-table-container" id="periodicTable"></div>
+</div>
+
+<!-- 결합 모달 -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <span class="modal-close" onclick="closeModal()">✕</span>
+        <div class="modal-title" id="modalTitle"></div>
+        <div class="formula-display" id="formulaDisplay"></div>
+        <div class="badge-container">
+            <span class="bond-type-badge" id="bondBadge"></span>
+        </div>
+        <div class="electron-visual" id="electronVisual"></div>
+        <div class="explanation-box" id="explanationBox"></div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// 원소 분류 (3가지 + 비활성기체)
+//   metal     → 금속  (빨간색)
+//   nonmetal  → 비금속 (초록색) ← 비활성 기체 포함
+//   metalloid → 준금속 (파란색)
+//
+// noble 속성은 결합 판별 로직에만 사용 (색상은 nonmetal과 동일)
+// ============================================================
+const elements = [
+  // 1주기
+  {n:1,  s:'H',  name:'수소',         p:1, g:1,  type:'nonmetal',  noble:false, ionCharge:-1, valence:1 },
+  {n:2,  s:'He', name:'헬륨',         p:1, g:18, type:'nonmetal',  noble:true,  ionCharge: 0, valence:0 },
+  // 2주기
+  {n:3,  s:'Li', name:'리튬',         p:2, g:1,  type:'metal',     noble:false, ionCharge:+1, valence:1 },
+  {n:4,  s:'Be', name:'베릴륨',       p:2, g:2,  type:'metal',     noble:false, ionCharge:+2, valence:2 },
+  {n:5,  s:'B',  name:'붕소',         p:2, g:13, type:'metalloid', noble:false, ionCharge: 0, valence:3 },
+  {n:6,  s:'C',  name:'탄소',         p:2, g:14, type:'nonmetal',  noble:false, ionCharge: 0, valence:4 },
+  {n:7,  s:'N',  name:'질소',         p:2, g:15, type:'nonmetal',  noble:false, ionCharge:-3, valence:3 },
+  {n:8,  s:'O',  name:'산소',         p:2, g:16, type:'nonmetal',  noble:false, ionCharge:-2, valence:2 },
+  {n:9,  s:'F',  name:'플루오린',     p:2, g:17, type:'nonmetal',  noble:false, ionCharge:-1, valence:1 },
+  {n:10, s:'Ne', name:'네온',         p:2, g:18, type:'nonmetal',  noble:true,  ionCharge: 0, valence:0 },
+  // 3주기
+  {n:11, s:'Na', name:'나트륨',       p:3, g:1,  type:'metal',     noble:false, ionCharge:+1, valence:1 },
+  {n:12, s:'Mg', name:'마그네슘',     p:3, g:2,  type:'metal',     noble:false, ionCharge:+2, valence:2 },
+  {n:13, s:'Al', name:'알루미늄',     p:3, g:13, type:'metal',     noble:false, ionCharge:+3, valence:3 },
+  {n:14, s:'Si', name:'규소',         p:3, g:14, type:'metalloid', noble:false, ionCharge: 0, valence:4 },
+  {n:15, s:'P',  name:'인',           p:3, g:15, type:'nonmetal',  noble:false, ionCharge:-3, valence:3 },
+  {n:16, s:'S',  name:'황',           p:3, g:16, type:'nonmetal',  noble:false, ionCharge:-2, valence:2 },
+  {n:17, s:'Cl', name:'염소',         p:3, g:17, type:'nonmetal',  noble:false, ionCharge:-1, valence:1 },
+  {n:18, s:'Ar', name:'아르곤',       p:3, g:18, type:'nonmetal',  noble:true,  ionCharge: 0, valence:0 },
+  // 4주기
+  {n:19, s:'K',  name:'칼륨',         p:4, g:1,  type:'metal',     noble:false, ionCharge:+1, valence:1 },
+  {n:20, s:'Ca', name:'칼슘',         p:4, g:2,  type:'metal',     noble:false, ionCharge:+2, valence:2 },
+  {n:21, s:'Sc', name:'스칸듐',       p:4, g:3,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:22, s:'Ti', name:'타이타늄',     p:4, g:4,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:23, s:'V',  name:'바나듐',       p:4, g:5,  type:'metal',     noble:false, ionCharge:+5, valence:0 },
+  {n:24, s:'Cr', name:'크로뮴',       p:4, g:6,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:25, s:'Mn', name:'망가니즈',     p:4, g:7,  type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:26, s:'Fe', name:'철',           p:4, g:8,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:27, s:'Co', name:'코발트',       p:4, g:9,  type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:28, s:'Ni', name:'니켈',         p:4, g:10, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:29, s:'Cu', name:'구리',         p:4, g:11, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:30, s:'Zn', name:'아연',         p:4, g:12, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:31, s:'Ga', name:'갈륨',         p:4, g:13, type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:32, s:'Ge', name:'저마늄',       p:4, g:14, type:'metalloid', noble:false, ionCharge: 0, valence:0 },
+  {n:33, s:'As', name:'비소',         p:4, g:15, type:'metalloid', noble:false, ionCharge: 0, valence:0 },
+  {n:34, s:'Se', name:'셀레늄',       p:4, g:16, type:'nonmetal',  noble:false, ionCharge:-2, valence:2 },
+  {n:35, s:'Br', name:'브로민',       p:4, g:17, type:'nonmetal',  noble:false, ionCharge:-1, valence:1 },
+  {n:36, s:'Kr', name:'크립톤',       p:4, g:18, type:'nonmetal',  noble:true,  ionCharge: 0, valence:0 },
+  // 5주기
+  {n:37, s:'Rb', name:'루비듐',       p:5, g:1,  type:'metal',     noble:false, ionCharge:+1, valence:1 },
+  {n:38, s:'Sr', name:'스트론튬',     p:5, g:2,  type:'metal',     noble:false, ionCharge:+2, valence:2 },
+  {n:39, s:'Y',  name:'이트륨',       p:5, g:3,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:40, s:'Zr', name:'지르코늄',     p:5, g:4,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:41, s:'Nb', name:'나이오븀',     p:5, g:5,  type:'metal',     noble:false, ionCharge:+5, valence:0 },
+  {n:42, s:'Mo', name:'몰리브데넘',   p:5, g:6,  type:'metal',     noble:false, ionCharge:+6, valence:0 },
+  {n:43, s:'Tc', name:'테크네튬',     p:5, g:7,  type:'metal',     noble:false, ionCharge:+7, valence:0 },
+  {n:44, s:'Ru', name:'루테늄',       p:5, g:8,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:45, s:'Rh', name:'로듐',         p:5, g:9,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:46, s:'Pd', name:'팔라듐',       p:5, g:10, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:47, s:'Ag', name:'은',           p:5, g:11, type:'metal',     noble:false, ionCharge:+1, valence:0 },
+  {n:48, s:'Cd', name:'카드뮴',       p:5, g:12, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:49, s:'In', name:'인듐',         p:5, g:13, type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:50, s:'Sn', name:'주석',         p:5, g:14, type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:51, s:'Sb', name:'안티모니',     p:5, g:15, type:'metalloid', noble:false, ionCharge: 0, valence:0 },
+  {n:52, s:'Te', name:'텔루륨',       p:5, g:16, type:'metalloid', noble:false, ionCharge:-2, valence:2 },
+  {n:53, s:'I',  name:'아이오딘',     p:5, g:17, type:'nonmetal',  noble:false, ionCharge:-1, valence:1 },
+  {n:54, s:'Xe', name:'제논',         p:5, g:18, type:'nonmetal',  noble:true,  ionCharge: 0, valence:0 },
+  // 6주기
+  {n:55, s:'Cs', name:'세슘',         p:6, g:1,  type:'metal',     noble:false, ionCharge:+1, valence:1 },
+  {n:56, s:'Ba', name:'바륨',         p:6, g:2,  type:'metal',     noble:false, ionCharge:+2, valence:2 },
+  // 란타넘족 (g:0 → 별도 행)
+  {n:57, s:'La', name:'란타넘',       p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:58, s:'Ce', name:'세륨',         p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:59, s:'Pr', name:'프라세오디뮴', p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:60, s:'Nd', name:'네오디뮴',     p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:61, s:'Pm', name:'프로메튬',     p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:62, s:'Sm', name:'사마륨',       p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:63, s:'Eu', name:'유로퓸',       p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:64, s:'Gd', name:'가돌리늄',     p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:65, s:'Tb', name:'터븀',         p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:66, s:'Dy', name:'디스프로슘',   p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:67, s:'Ho', name:'홀뮴',         p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:68, s:'Er', name:'어븀',         p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:69, s:'Tm', name:'툴륨',         p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:70, s:'Yb', name:'이터븀',       p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:71, s:'Lu', name:'루테튬',       p:6, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  // 6주기 계속
+  {n:72, s:'Hf', name:'하프늄',       p:6, g:4,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:73, s:'Ta', name:'탄탈럼',       p:6, g:5,  type:'metal',     noble:false, ionCharge:+5, valence:0 },
+  {n:74, s:'W',  name:'텅스텐',       p:6, g:6,  type:'metal',     noble:false, ionCharge:+6, valence:0 },
+  {n:75, s:'Re', name:'레늄',         p:6, g:7,  type:'metal',     noble:false, ionCharge:+7, valence:0 },
+  {n:76, s:'Os', name:'오스뮴',       p:6, g:8,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:77, s:'Ir', name:'이리듐',       p:6, g:9,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:78, s:'Pt', name:'백금',         p:6, g:10, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:79, s:'Au', name:'금',           p:6, g:11, type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:80, s:'Hg', name:'수은',         p:6, g:12, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:81, s:'Tl', name:'탈륨',         p:6, g:13, type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:82, s:'Pb', name:'납',           p:6, g:14, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:83, s:'Bi', name:'비스무트',     p:6, g:15, type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:84, s:'Po', name:'폴로늄',       p:6, g:16, type:'metalloid', noble:false, ionCharge:+2, valence:0 },
+  {n:85, s:'At', name:'아스타틴',     p:6, g:17, type:'metalloid', noble:false, ionCharge:-1, valence:1 },
+  {n:86, s:'Rn', name:'라돈',         p:6, g:18, type:'nonmetal',  noble:true,  ionCharge: 0, valence:0 },
+  // 7주기
+  {n:87, s:'Fr', name:'프랑슘',       p:7, g:1,  type:'metal',     noble:false, ionCharge:+1, valence:1 },
+  {n:88, s:'Ra', name:'라듐',         p:7, g:2,  type:'metal',     noble:false, ionCharge:+2, valence:2 },
+  // 악티늄족 (g:0 → 별도 행)
+  {n:89, s:'Ac', name:'악티늄',       p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:90, s:'Th', name:'토륨',         p:7, g:0,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:91, s:'Pa', name:'프로트악티늄', p:7, g:0,  type:'metal',     noble:false, ionCharge:+5, valence:0 },
+  {n:92, s:'U',  name:'우라늄',       p:7, g:0,  type:'metal',     noble:false, ionCharge:+6, valence:0 },
+  {n:93, s:'Np', name:'넵투늄',       p:7, g:0,  type:'metal',     noble:false, ionCharge:+5, valence:0 },
+  {n:94, s:'Pu', name:'플루토늄',     p:7, g:0,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:95, s:'Am', name:'아메리슘',     p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:96, s:'Cm', name:'퀴륨',         p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:97, s:'Bk', name:'버클륨',       p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:98, s:'Cf', name:'캘리포늄',     p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:99, s:'Es', name:'아인슈타이늄', p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:100,s:'Fm', name:'페르뮴',       p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:101,s:'Md', name:'멘델레븀',     p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:102,s:'No', name:'노벨륨',       p:7, g:0,  type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:103,s:'Lr', name:'로렌슘',       p:7, g:0,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  // 7주기 계속
+  {n:104,s:'Rf', name:'러더포듐',     p:7, g:4,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:105,s:'Db', name:'더브늄',       p:7, g:5,  type:'metal',     noble:false, ionCharge:+5, valence:0 },
+  {n:106,s:'Sg', name:'시보귬',       p:7, g:6,  type:'metal',     noble:false, ionCharge:+6, valence:0 },
+  {n:107,s:'Bh', name:'보륨',         p:7, g:7,  type:'metal',     noble:false, ionCharge:+7, valence:0 },
+  {n:108,s:'Hs', name:'하슘',         p:7, g:8,  type:'metal',     noble:false, ionCharge:+4, valence:0 },
+  {n:109,s:'Mt', name:'마이트너륨',   p:7, g:9,  type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:110,s:'Ds', name:'다름슈타튬',   p:7, g:10, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:111,s:'Rg', name:'뢴트게늄',     p:7, g:11, type:'metal',     noble:false, ionCharge:+3, valence:0 },
+  {n:112,s:'Cn', name:'코페르니슘',   p:7, g:12, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:113,s:'Nh', name:'니호늄',       p:7, g:13, type:'metal',     noble:false, ionCharge:+1, valence:0 },
+  {n:114,s:'Fl', name:'플레로븀',     p:7, g:14, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:115,s:'Mc', name:'모스코븀',     p:7, g:15, type:'metal',     noble:false, ionCharge:+1, valence:0 },
+  {n:116,s:'Lv', name:'리버모륨',     p:7, g:16, type:'metal',     noble:false, ionCharge:+2, valence:0 },
+  {n:117,s:'Ts', name:'테네신',       p:7, g:17, type:'metalloid', noble:false, ionCharge:-1, valence:1 },
+  {n:118,s:'Og', name:'오가네손',     p:7, g:18, type:'nonmetal',  noble:true,  ionCharge: 0, valence:0 },
+];
+
+// ============================================================
+// 분류 헬퍼
+// ============================================================
+function isMetal(el)     { return el.type === 'metal'; }
+function isNonMetal(el)  { return el.type === 'nonmetal'; }
+function isMetalloid(el) { return el.type === 'metalloid'; }
+function isNoble(el)     { return el.noble === true; }
+
+function getTypeKor(el) {
+    if (isNoble(el))     return '비금속 · 비활성 기체(18족)';
+    if (isMetal(el))     return '금속';
+    if (isNonMetal(el))  return '비금속';
+    if (isMetalloid(el)) return '준금속';
+    return '';
+}
+
+// ============================================================
+// 주기율표 생성
+// ============================================================
+function buildPeriodicTable() {
+    const container = document.getElementById('periodicTable');
+    container.innerHTML = '';
+
+    // 족 헤더
+    const headerRow = document.createElement('div');
+    headerRow.className = 'group-headers';
+    headerRow.appendChild(document.createElement('div'));
+    for (let g = 1; g <= 18; g++) {
+        const gh = document.createElement('div');
+        gh.className = 'group-header';
+        gh.textContent = g + '족';
+        headerRow.appendChild(gh);
+    }
+    container.appendChild(headerRow);
+
+    // 1~7 주기
+    for (let period = 1; period <= 7; period++) {
+        const row = document.createElement('div');
+        row.className = 'period-row';
+
+        const pl = document.createElement('div');
+        pl.className = 'period-label';
+        pl.textContent = period + '주기';
+        row.appendChild(pl);
+
+        for (let group = 1; group <= 18; group++) {
+            // 6·7주기 3족 → 란타넘/악티늄 안내 셀
+            if ((period === 6 || period === 7) && group === 3) {
+                const ph = document.createElement('div');
+                ph.className = 'element-cell metal';
+                ph.style.cssText = 'cursor:default;opacity:0.55;pointer-events:none;';
+                ph.innerHTML = period === 6
+                    ? `<div style="font-size:7px;text-align:center;line-height:1.5;color:rgba(255,255,255,0.9)">57–71<br>란타넘족<br>↓</div>`
+                    : `<div style="font-size:7px;text-align:center;line-height:1.5;color:rgba(255,255,255,0.9)">89–103<br>악티늄족<br>↓</div>`;
+                row.appendChild(ph);
+                continue;
+            }
+
+            const el = elements.find(e => e.p === period && e.g === group);
+            const cell = document.createElement('div');
+
+            if (el) {
+                cell.className = `element-cell ${el.type}`;
+                cell.id = `el-${el.n}`;
+                cell.innerHTML = makeCellHTML(el);
+                cell.onclick = () => selectElement(el);
+            } else {
+                cell.className = 'element-cell empty';
+            }
+            row.appendChild(cell);
+        }
+        container.appendChild(row);
+    }
+
+    // 란타넘족·악티늄족 별도 행
+    const section = document.createElement('div');
+    section.className = 'lantha-section';
+
+    // 란타넘족 57~71
+    const lanthaRow = document.createElement('div');
+    lanthaRow.className = 'lantha-row';
+    const ll = document.createElement('div');
+    ll.className = 'lantha-period-label';
+    ll.textContent = '6주기';
+    lanthaRow.appendChild(ll);
+    const llbl = document.createElement('div');
+    llbl.className = 'lantha-series-label';
+    llbl.textContent = '란타넘족';
+    lanthaRow.appendChild(llbl);
+    for (let n = 57; n <= 71; n++) {
+        const el = elements.find(e => e.n === n);
+        const cell = document.createElement('div');
+        cell.className = `element-cell ${el.type}`;
+        cell.id = `el-${el.n}`;
+        cell.innerHTML = makeCellHTML(el);
+        cell.onclick = () => selectElement(el);
+        lanthaRow.appendChild(cell);
+    }
+    section.appendChild(lanthaRow);
+
+    // 악티늄족 89~103
+    const actRow = document.createElement('div');
+    actRow.className = 'lantha-row';
+    const al = document.createElement('div');
+    al.className = 'lantha-period-label';
+    al.textContent = '7주기';
+    actRow.appendChild(al);
+    const albl = document.createElement('div');
+    albl.className = 'lantha-series-label';
+    albl.textContent = '악티늄족';
+    actRow.appendChild(albl);
+    for (let n = 89; n <= 103; n++) {
+        const el = elements.find(e => e.n === n);
+        const cell = document.createElement('div');
+        cell.className = `element-cell ${el.type}`;
+        cell.id = `el-${el.n}`;
+        cell.innerHTML = makeCellHTML(el);
+        cell.onclick = () => selectElement(el);
+        actRow.appendChild(cell);
+    }
+    section.appendChild(actRow);
+    container.appendChild(section);
+}
+
+function makeCellHTML(el) {
+    const gText = el.g === 0 ? '–' : el.g + '족';
+    return `
+        <div class="el-number">${el.n}</div>
+        <div class="el-symbol">${el.s}</div>
+        <div class="el-name">${el.name}</div>
+        <div class="tooltip">
+            <div class="tooltip-symbol">${el.s}</div>
+            <div>${el.name} (${el.n}번)</div>
+            <div>${el.p}주기 ${gText}</div>
+            <div>${getTypeKor(el)}</div>
+        </div>
+    `;
+}
+
+// ============================================================
+// 원소 선택
+// ============================================================
+const sel = [null, null];
+
+function selectElement(el) {
+    if (sel[0] && sel[0].n === el.n) { sel[0] = null; refresh(); return; }
+    if (sel[1] && sel[1].n === el.n) { sel[1] = null; refresh(); return; }
+    if      (!sel[0]) sel[0] = el;
+    else if (!sel[1]) sel[1] = el;
+    else { sel[0] = el; sel[1] = null; }
+    refresh();
+}
+
+function refresh() {
+    document.querySelectorAll('.element-cell').forEach(c => c.classList.remove('selected-1','selected-2'));
+    if (sel[0]) { const c = document.getElementById(`el-${sel[0].n}`); if(c) c.classList.add('selected-1'); }
+    if (sel[1]) { const c = document.getElementById(`el-${sel[1].n}`); if(c) c.classList.add('selected-2'); }
+
+    const box1 = document.getElementById('selected1');
+    const box2 = document.getElementById('selected2');
+    box1.innerHTML = sel[0]
+        ? `<div class="label">첫 번째 원소</div><div class="symbol" style="color:#ff6b6b;">${sel[0].s}</div><div class="name">${sel[0].name}</div>`
+        : `<div class="label">첫 번째 원소</div><div class="symbol" style="color:#ff6b6b;">?</div><div class="name">선택 안 됨</div>`;
+    box2.innerHTML = sel[1]
+        ? `<div class="label">두 번째 원소</div><div class="symbol" style="color:#4ecdc4;">${sel[1].s}</div><div class="name">${sel[1].name}</div>`
+        : `<div class="label">두 번째 원소</div><div class="symbol" style="color:#4ecdc4;">?</div><div class="name">선택 안 됨</div>`;
+
+    document.getElementById('checkBtn').disabled = !(sel[0] && sel[1]);
+}
+
+function resetSelection() { sel[0] = null; sel[1] = null; refresh(); }
+
+// ============================================================
+// 결합 판별
+// ============================================================
+function checkBond() {
+    const a = sel[0], b = sel[1];
+    if (!a || !b) return;
+
+    let bondType, badgeClass, formula, visualHTML, explanation;
+
+    // 비활성 기체 포함 여부 먼저 확인
+    if (isNoble(a) || isNoble(b)) {
+        const nobleEl = isNoble(a) ? a : b;
+        bondType = '결합 불가';
+        badgeClass = 'unknown-badge';
+        formula = `${a.s} + ${b.s}`;
+        visualHTML = `<div style="text-align:center;font-size:52px;">🚫</div>`;
+        explanation = `⚠️ <span class="hl-yellow">${nobleEl.name}(${nobleEl.s})</span>은(는)
+            <b>18족 비활성 기체</b>입니다.<br><br>
+            18족 원소는 최외각 전자 껍질이 이미 꽉 차 있어 매우 안정하기 때문에<br>
+            일반적으로 다른 원소와 <span class="hl-yellow">화학 결합을 하지 않습니다.</span><br><br>
+            💡 고등학교 1학년 과정에서는 18족 원소는 화학 결합에 참여하지 않는다고 배웁니다.`;
+
+    } else if (isMetal(a) && isNonMetal(b)) {
+        bondType = '이온 결합'; badgeClass = 'ionic-badge';
+        const r = ionicInfo(a, b);
+        formula = r.formula; visualHTML = r.visual; explanation = r.explanation;
+
+    } else if (isNonMetal(a) && isMetal(b)) {
+        bondType = '이온 결합'; badgeClass = 'ionic-badge';
+        const r = ionicInfo(b, a);
+        formula = r.formula; visualHTML = r.visual; explanation = r.explanation;
+
+    } else if (isNonMetal(a) && isNonMetal(b)) {
+        bondType = '공유 결합'; badgeClass = 'covalent-badge';
+        const r = covalentInfo(a, b);
+        formula = r.formula; visualHTML = r.visual; explanation = r.explanation;
+
+    } else if (isMetal(a) && isMetal(b)) {
+        bondType = '금속 결합 (고1 미학습)'; badgeClass = 'unknown-badge';
+        formula = `${a.s} · ${b.s}`;
+        visualHTML = `<div style="text-align:center;font-size:52px;">🔮</div>`;
+        explanation = `⚠️ <span class="hl-yellow">금속 결합</span>은 고등학교 1학년 과정에서
+            <b>아직 배우지 않은 결합</b>입니다.<br><br>
+            금속 결합은 금속 원자들이 전자를 내놓아 <b>자유 전자</b>를 형성하고,<br>
+            양이온 사이를 자유 전자가 이동하며 결합하는 방식입니다.<br><br>
+            💡 고1 과정에서는 이온 결합과 공유 결합만 학습합니다.<br>
+            금속 결합은 화학Ⅰ에서 자세히 배우게 됩니다!`;
+
+    } else {
+        // 준금속 포함 기타
+        bondType = '아직 배우지 않은 결합'; badgeClass = 'unknown-badge';
+        formula = `${a.s} + ${b.s}`;
+        visualHTML = `<div style="text-align:center;font-size:52px;">🔮</div>`;
+        explanation = `⚠️ <span class="hl-yellow">${a.name}(${a.s})</span>과(와)
+            <span class="hl-yellow">${b.name}(${b.s})</span>의 결합은<br>
+            고등학교 1학년 과정에서 <b>아직 배우지 않은 내용</b>입니다.<br><br>
+            이 중 하나 이상이 <b>준금속</b>으로, 금속과 비금속의 중간 성질을 가지며<br>
+            단순한 이온·공유 결합으로 설명되지 않는 복잡한 결합을 형성합니다.<br><br>
+            💡 고1 과정에서는 대표적인 이온 결합과 공유 결합을 중점적으로 학습합니다!`;
+    }
+
+    document.getElementById('modalTitle').textContent = `${a.name}(${a.s}) + ${b.name}(${b.s})`;
+    document.getElementById('formulaDisplay').innerHTML = formula;
+    const badge = document.getElementById('bondBadge');
+    badge.textContent = bondType;
+    badge.className = `bond-type-badge ${badgeClass}`;
+    document.getElementById('electronVisual').innerHTML = visualHTML;
+    document.getElementById('explanationBox').innerHTML = explanation;
+    document.getElementById('modalOverlay').classList.add('active');
+}
+
+// ============================================================
+// 이온 결합 정보
+// ============================================================
+function ionicInfo(metalEl, nonmetalEl) {
+    const mc = Math.abs(metalEl.ionCharge);
+    const nc = Math.abs(nonmetalEl.ionCharge);
+
+    function gcd(a,b){ return b===0?a:gcd(b,a%b); }
+    let rm = nc, rn = mc;
+    if (rm>0 && rn>0) { const g=gcd(rm,rn); rm/=g; rn/=g; }
+    else { rm=1; rn=1; }
+
+    const ms=metalEl.s, ns=nonmetalEl.s;
+    let formula='';
+    if      (rm===1&&rn===1) formula=`${ms}${ns}`;
+    else if (rm===1)         formula=`${ms}${ns}<sub>${rn}</sub>`;
+    else if (rn===1)         formula=`${ms}<sub>${rm}</sub>${ns}`;
+    else                     formula=`${ms}<sub>${rm}</sub>${ns}<sub>${rn}</sub>`;
+
+    const mSym = mc===1?'+':`${mc}+`;
+    const nSym = nc===1?'−':`${nc}−`;
+
+    const visual = `
+        <div class="atom-visual">
+            <div class="atom-circle" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);">${ms}</div>
+            <div class="atom-label">${metalEl.name}<br><span style="color:#ffd700">원자</span></div>
+        </div>
+        <div class="arrow-visual">→</div>
+        <div class="atom-visual">
+            <div class="atom-circle" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);border:2px solid #ffd700;">
+                ${ms}<sup style="font-size:11px">${mSym}</sup>
+            </div>
+            <div class="atom-label">${metalEl.name}<br><span style="color:#ffd700">양이온</span></div>
+        </div>
+        <div style="font-size:22px;color:#aaa;">+</div>
+        <div class="atom-visual">
+            <div class="atom-circle" style="background:linear-gradient(135deg,#14532d,#22c55e);border:2px solid #60a5fa;">
+                ${ns}<sup style="font-size:11px">${nSym}</sup>
+            </div>
+            <div class="atom-label">${nonmetalEl.name}<br><span style="color:#60a5fa">음이온</span></div>
+        </div>
+    `;
+
+    const loseTxt = mc===1?'전자 1개를 잃어':`전자 ${mc}개를 잃어`;
+    const gainTxt = nc===1?'전자 1개를 얻어':`전자 ${nc}개를 얻어`;
+    const ratioTxt = (rm===1&&rn===1)?'':`<br>➡️ ${metalEl.name} ${rm}개 : ${nonmetalEl.name} ${rn}개 비율로 결합합니다.`;
+
+    const explanation = `
+        🔴 <span class="hl-yellow">${metalEl.name}(${ms})</span>은(는)
+        <span class="hl-yellow">${loseTxt}</span>
+        양이온(${ms}<sup>${mSym}</sup>)이 됩니다.<br><br>
+        🟢 <span class="hl-green">${nonmetalEl.name}(${ns})</span>은(는)
+        <span class="hl-green">${gainTxt}</span>
+        음이온(${ns}<sup>${nSym}</sup>)이 됩니다.<br><br>
+        ⚡ 생성된 양이온과 음이온 사이의 <span class="hl-yellow">정전기적 인력</span>에 의해
+        <span class="hl-yellow">이온 결합</span>이 형성됩니다.${ratioTxt}<br><br>
+        📝 <b>화학식:</b> <span class="hl-yellow">${formula.replace(/<[^>]*>/g,'')}</span><br>
+        양이온의 전하량 합과 음이온의 전하량 합이 같아져 전기적으로 중성이 됩니다.
+    `;
+    return { formula, visual, explanation };
+}
+
+// ============================================================
+// 공유 결합 정보
+// ============================================================
+function covalentInfo(el1, el2) {
+    const v1=el1.valence, v2=el2.valence;
+    function gcd(a,b){ return b===0?a:gcd(b,a%b); }
+
+    let formula='', bondCount=0, formulaExtra='';
+    const s1=el1.s, s2=el2.s;
+
+    if (el1.n===el2.n) {
+        formula=`${s1}<sub>2</sub>`; bondCount=v1;
+    } else {
+        if (v1===0||v2===0) {
+            formula=`${s1}${s2}`; bondCount=1;
+        } else {
+            const g=gcd(v1,v2);
+            const c1=v2/g, c2=v1/g;
+            bondCount=v1/g;
+            if      (c1===1&&c2===1) formula=`${s1}${s2}`;
+            else if (c1===1)         formula=`${s1}${s2}<sub>${c2}</sub>`;
+            else if (c2===1)         formula=`${s1}<sub>${c1}</sub>${s2}`;
+            else                     formula=`${s1}<sub>${c1}</sub>${s2}<sub>${c2}</sub>`;
+            if (!(c1===1&&c2===1)) formulaExtra=`(${el1.name} ${c1}개 : ${el2.name} ${c2}개)`;
+        }
+    }
+
+    const bondLabel = bondCount===1?'단일 결합 (—)':bondCount===2?'2중 결합 (=)':bondCount===3?'3중 결합 (≡)':`${bondCount}중 결합`;
+
+    const visual = `
+        <div class="atom-visual">
+            <div class="atom-circle" style="background:linear-gradient(135deg,#14532d,#22c55e);">${s1}</div>
+            <div class="atom-label">${el1.name}<br><span style="color:#ffd700">원자</span></div>
+        </div>
+        <div class="arrow-visual">⇌</div>
+        <div class="atom-visual">
+            <div class="atom-circle" style="background:linear-gradient(135deg,#14532d,#22c55e);">${s2}</div>
+            <div class="atom-label">${el2.name}<br><span style="color:#ffd700">원자</span></div>
+        </div>
+    `;
+
+    const explanation = `
+        🟢 <span class="hl-green">${el1.name}(${s1})</span>은(는)
+        전자 <span class="hl-green">${v1}개</span>를 공유에 사용합니다.<br><br>
+        🟢 <span class="hl-green">${el2.name}(${s2})</span>은(는)
+        전자 <span class="hl-green">${v2}개</span>를 공유에 사용합니다.<br><br>
+        🔗 두 원자가 <span class="hl-yellow">전자쌍을 공유</span>하여
+        <span class="hl-yellow">공유 결합</span>을 형성합니다.<br>
+        결합 종류: <b>${bondLabel}</b> ${formulaExtra}<br><br>
+        📝 <b>화학식:</b> <span class="hl-yellow">${formula.replace(/<[^>]*>/g,'')}</span><br>
+        공유 결합은 주로 <b>비금속 원소끼리</b> 전자쌍을 나누어 가지며<br>
+        옥텟 규칙(최외각 전자 8개)을 만족하려는 경향에 의해 형성됩니다.
+    `;
+    return { formula, visual, explanation };
+}
+
+// ============================================================
+// 모달
+// ============================================================
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+buildPeriodicTable();
+</script>
+</body>
+</html>
